@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is admin
+    // Checks the 'role' field in users collection
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Products Collection - Public read, Admin write
+    match /products/{productId} {
+      allow read: if true;  // Anyone can view products
+      allow create, update, delete: if isAdmin();  // Only admin can manage
+    }
+    
+    // Categories Collection - Public read, Admin write
+    match /categories/{categoryId} {
+      allow read: if true;  // Anyone can view categories
+      allow create, update, delete: if isAdmin();  // Only admin can manage
+    }
+    
+    // Services Collection - Public read, Admin write
+    match /services/{serviceId} {
+      allow read: if true;  // Anyone can view services
+      allow create, update, delete: if isAdmin();  // Only admin can manage
+    }
+    
+    // Gallery Collection - Public read, Admin write
+    match /gallery/{imageId} {
+      allow read: if true;  // Anyone can view gallery
+      allow create, update, delete: if isAdmin();  // Only admin can manage
+    }
+    
+    // Inquiries Collection - Public create, Admin read/update/delete
+    match /inquiries/{inquiryId} {
+      allow create: if true;  // Anyone can submit inquiry
+      allow read, update, delete: if isAdmin();  // Only admin can manage
+    }
+    
+    // Orders Collection - Public create, Admin read/update/delete
+    match /orders/{orderId} {
+      allow create: if true;  // Anyone can place order
+      allow read, update, delete: if isAdmin();  // Only admin can manage
+    }
+    
+    // Users Collection - Users can read their own data, Admin can access all
+    match /users/{userId} {
+      allow read: if request.auth != null && 
+                     (request.auth.uid == userId || isAdmin());
+      // Allow authenticated users to create/update their own document
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      // Admin can manage all users
+      allow write: if isAdmin();
+    }
+    
+    // Admin Collection - Only admin can access
+    match /admin/{document=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Testimonials Collection - Public read, Admin write
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Settings Collection - Public read, Admin write
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
